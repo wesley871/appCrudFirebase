@@ -11,13 +11,8 @@ export default function App() {
     const [idade, setIdade] = useState();
     const [email, setEmail] = useState();
 
-    useEffect(() => {
-        try {
-            KeepAwake.deactivateKeepAwakeAsync();
-        } catch (e) {
-            // Ignore error
-        }
-    }, []);
+    const [ nomePesquisa, setNomePesquisa ] = useState();
+
 
     async function save() {
         try {
@@ -35,8 +30,29 @@ export default function App() {
         }
     }
 
-    function search() {
-        Alert.alert(nome);
+    async function search() {
+        if(!nomePesquisa.trim()){
+            Alert.alert("Campo em branco, Digite o nome completo para pesquisar");
+            return;
+        }
+        try {
+            const busca = await Firebase.firestore().collection("cliente").where("nome", "==", nomePesquisa).get();
+            if(!busca.empty){
+                const doc = busca.docs[0];
+                const data = doc.data();
+                // Alert.alert(data.email);
+                setNome(data.nome || "")
+                setEmail(data.email || "");
+                setIdade(data.idade || "");
+            } else {
+                Alert.alert("Cliente não encontrado!");
+                setNome("");
+                setEmail("");
+                setIdade("");
+            }
+        } catch (error) {
+            Alert.alert(error);
+        }
     }
 
     return (
@@ -49,7 +65,8 @@ export default function App() {
                         <TextInput
                             style={styles.textInputSearch}
                             placeholder="Digite o nome completo"
-                            onChangeText={setNome}
+                            value={nomePesquisa}
+                            onChangeText={setNomePesquisa}
                         />
                         <TouchableOpacity
                             style={{ paddingHorizontal: 10 }}
@@ -68,16 +85,19 @@ export default function App() {
                     <TextInput
                         style={styles.textInputRegister}
                         placeholder="Digite o nome completo"
+                        value={nome}
                         onChangeText={setNome}
                     />
                     <TextInput
                         style={styles.textInputRegister}
                         placeholder="Digite um email"
+                        value={email}
                         onChangeText={setEmail}
                     />
                     <TextInput
                         style={styles.textInputRegister}
                         placeholder="Digite sua idade"
+                        value={idade}
                         onChangeText={setIdade}
                     />
                     <TouchableOpacity style={styles.saveButton} onPress={save}>
