@@ -3,14 +3,13 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert } from "react-native";
 import { Fontisto } from "@expo/vector-icons";
-import * as KeepAwake from "expo-keep-awake";
 import Firebase from "./factory/firebase";
 
 export default function App() {
     const [nome, setNome] = useState();
     const [idade, setIdade] = useState();
     const [email, setEmail] = useState();
-
+    const [codigo, setCodigo] = useState();
     const [ nomePesquisa, setNomePesquisa ] = useState();
 
 
@@ -21,18 +20,16 @@ export default function App() {
                 email: email,
                 idade: idade,
             });
-            setNome("");
-            setEmail("");
-            setIdade("");
-            Alert.alert("Dados cadastrados com sucesso.");
+            alert("Dados cadastrados com sucesso.");
+            clear();
         } catch (error) {
-            Alert.alert("Erro", error.message);
+            alert("Erro", error.message);
         }
     }
 
     async function search() {
         if(!nomePesquisa.trim()){
-            Alert.alert("Campo em branco, Digite o nome completo para pesquisar");
+            alert("Campo em branco, Digite o nome completo para pesquisar");
             return;
         }
         try {
@@ -41,19 +38,63 @@ export default function App() {
                 const doc = busca.docs[0];
                 const data = doc.data();
                 // Alert.alert(data.email);
+                setCodigo(doc.id || "");
                 setNome(data.nome || "")
                 setEmail(data.email || "");
                 setIdade(data.idade || "");
             } else {
-                Alert.alert("Cliente não encontrado!");
-                setNome("");
-                setEmail("");
-                setIdade("");
+                alert("Cliente não encontrado!");
+                clear();
             }
         } catch (error) {
-            Alert.alert(error);
+            alert(error);
         }
     }
+
+    async function deleteClient(){
+        if(!codigo){
+            alert("Consulta um cliente");
+            return
+        }
+        try {
+            await Firebase.firestore().collection("cliente").doc(codigo).delete();
+            clear();
+            alert("Cliente excluído com sucesso");
+        } catch (error) {
+            alert("Erro ao excluir um cliente");
+            return
+        }
+    }
+    
+    async function update(){
+        try{
+            await Firebase.firestore().collection("cliente").doc(codigo).update({
+                nome: nome,
+                email: email,
+                idade: idade
+            });
+            alert("Cliente alterado com sucesso.");
+            clear();
+        }catch(error){
+            alert(error.message);
+        }
+    }
+
+    function saveOrUpdate(){
+        if(!codigo){
+            save();
+        }else{
+            update();
+        }
+    }
+
+    function clear(){
+        setNomePesquisa("");
+        setCodigo("")
+        setIdade("");
+        setEmail("");
+        setNome("");
+}
 
     return (
         <SafeAreaProvider>
@@ -80,7 +121,7 @@ export default function App() {
                     <Text style={styles.title}>Cadastro de clientes</Text>
                     <View style={styles.viewCode}>
                         <Text>Código: </Text>
-                        <Text id="codigo">...</Text>
+                        <Text id="codigo">{codigo}</Text>
                     </View>
                     <TextInput
                         style={styles.textInputRegister}
@@ -100,9 +141,14 @@ export default function App() {
                         value={idade}
                         onChangeText={setIdade}
                     />
-                    <TouchableOpacity style={styles.saveButton} onPress={save}>
+                    <TouchableOpacity style={styles.saveButton} onPress={saveOrUpdate}>
                         <Text style={styles.saveButtonText}>Salvar</Text>
                     </TouchableOpacity>
+                    { !codigo ? "" :
+                    <TouchableOpacity style={styles.saveButton} onPress={deleteClient}>
+                        <Text style={styles.saveButtonText}>Deletar</Text>
+                    </TouchableOpacity>
+                    }
                 </View>
             </SafeAreaView>
         </SafeAreaProvider>
